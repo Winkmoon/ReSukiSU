@@ -216,8 +216,8 @@ static int read_asn1_length(const unsigned char *data, int maxlen, int *offset, 
     return 0;
 }
 
-static int extract_cert_from_pkcs7(const unsigned char *pkcs7, int pkcs7_len,
-                                    const unsigned char **cert, int *cert_len)
+static int extract_cert_from_pkcs7(const unsigned char *pkcs7, int pkcs7_len, const unsigned char **cert,
+                                   int *cert_len)
 {
     int offset = 0;
     int len;
@@ -316,17 +316,14 @@ static int find_v1_cert_in_zip(struct file *fp, unsigned char *cert_buf, u32 max
 
         int fn_len = header.file_name_length;
         if (fn_len > 9) {
-            bool is_rsa = (filename[fn_len - 4] == '.' && filename[fn_len - 3] == 'R' &&
-                           filename[fn_len - 2] == 'S' && filename[fn_len - 1] == 'A');
-            bool is_dsa = (filename[fn_len - 4] == '.' && filename[fn_len - 3] == 'D' &&
-                           filename[fn_len - 2] == 'S' && filename[fn_len - 1] == 'A');
+            bool is_rsa = !strncmp(filename + fn_len - 4, ".RSA", 4);
+            bool is_dsa = !strncmp(filename + fn_len - 4, ".DSA", 4);
             if ((is_rsa || is_dsa) && strncmp(filename, "META-INF/", 9) == 0) {
                 if (header.compressed_size > max_len)
                     return -1;
                 if (header.compression != 0)
                     return -1;
-                if (ksu_kernel_read_compat(fp, cert_buf, header.compressed_size, &pos) !=
-                    header.compressed_size)
+                if (ksu_kernel_read_compat(fp, cert_buf, header.compressed_size, &pos) != header.compressed_size)
                     return -1;
                 *cert_len = header.compressed_size;
                 return 0;
