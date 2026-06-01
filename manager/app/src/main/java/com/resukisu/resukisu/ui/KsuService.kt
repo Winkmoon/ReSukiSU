@@ -3,6 +3,7 @@ package com.resukisu.resukisu.ui
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageInfo
+import android.os.Build
 import android.os.IBinder
 import android.os.UserHandle
 import android.os.UserManager
@@ -27,9 +28,14 @@ class KsuService : RootService() {
 
     private fun loadAllPackages(): List<PackageInfo> {
         val tmp = arrayListOf<PackageInfo>()
-        for (user in (getSystemService(USER_SERVICE) as UserManager).userProfiles) {
-            val userId = user.getUserIdCompat()
-            tmp += getInstalledPackagesAsUser(userId)
+        val userManager = getSystemService(USER_SERVICE) as UserManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            for (user in userManager.userProfiles) {
+                val userId = user.getUserIdCompat()
+                tmp += getInstalledPackagesAsUser(userId)
+            }
+        } else {
+            tmp += getInstalledPackagesAsUser(0)
         }
         return tmp
     }

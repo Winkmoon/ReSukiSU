@@ -4,13 +4,13 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
 }
 
-val androidMinSdkVersion by extra(26)
+val androidMinSdkVersion by extra(23)
 val androidTargetSdkVersion by extra(37)
 val androidCompileSdkVersion by extra(37)
 val androidBuildToolsVersion by extra("36.1.0")
 val androidCompileNdkVersion by extra(libs.versions.ndk.get())
-val androidSourceCompatibility by extra(JavaVersion.VERSION_21)
-val androidTargetCompatibility by extra(JavaVersion.VERSION_21)
+val androidSourceCompatibility by extra(JavaVersion.VERSION_1_8)
+val androidTargetCompatibility by extra(JavaVersion.VERSION_1_8)
 val managerVersionCode by extra(30000 + getGitCommitCount() + 700)
 val managerVersionName by extra(getGitDescribe())
 
