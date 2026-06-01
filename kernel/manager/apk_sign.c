@@ -29,14 +29,14 @@
  * ============================================================================
  * SECURITY FIXES SUMMARY (v2024-06-01)
  * ============================================================================
- * 
+ *
  * This file contains comprehensive security fixes for the APK signature
  * verification subsystem. The original code had multiple critical
  * vulnerabilities that could lead to:
  * - Kernel memory exhaustion (DoS)
  * - Information disclosure via pointer underflow
  * - Signature verification bypass
- * 
+ *
  * All fixes are marked with [FIX-*] tags for audit trail.
  * ============================================================================
  */
@@ -50,14 +50,14 @@
 #define MAX_V2_SIGNATURE_BLOCKS        10
 
 /* [FIX-SAFETY] Macro to safely check string suffix without pointer underflow
- * 
+ *
  * VULNERABILITY FIXED: Original code did:
  *   strncasecmp(fileName + header.file_name_length - 4, ".RSA", 4)
- * 
+ *
  * When header.file_name_length < 4, this causes:
  *   fileName + (negative value) = pointer underflow
  *   Reads kernel memory from arbitrary stack addresses
- * 
+ *
  * FIX: Check length first before pointer arithmetic
  */
 #define SAFE_SUFFIX_CHECK(fname, flen, suffix, slen) \
@@ -209,7 +209,7 @@ static bool check_block(struct file *fp, u32 *size4, loff_t *pos, u32 *offset, u
     bin2hex(hash_str, digest, SHA256_DIGEST_SIZE);
     hash_str[SHA256_DIGEST_SIZE * 2] = '\0';
 
-    // v2 签名同样调用统一的公共校验函数
+    // v2 签名同样调用统一的公共校验函�?
     signature_valid = verify_cert_hash(hash_str, *size4, matched_index);
 
     *offset += *size4;
@@ -238,11 +238,11 @@ struct zip_data_descriptor {
 } __attribute__((packed));
 
 /* [FIX-CENTRAL-DIR] Central Directory Header structure for validation
- * 
+ *
  * SECURITY FIX: The original code only parsed local file headers.
  * Attackers could inject fake headers into file data sections that
  * standard tools would ignore (by parsing the central directory).
- * 
+ *
  * This struct enables validation against the authoritative central directory.
  */
 struct zip_central_dir_header {
@@ -271,7 +271,7 @@ struct zip_central_dir_header {
  * 1. Memory leak when ksu_kernel_read_compat fails (goto clean without cleanup)
  * 2. Pointer underflow in strncasecmp with negative offsets
  * 3. Signature verification can be bypassed by copying .RSA from valid APK
- * 
+ *
  * IMPROVEMENTS:
  * - All error paths now properly free cert_buf
  * - Safe suffix checking using SAFE_SUFFIX_CHECK macro
@@ -300,7 +300,7 @@ static bool check_v1_signature(char *path, u8 *signature_index)
 
     while (ksu_kernel_read_compat(fp, &header, sizeof(struct zip_entry_header), &pos) ==
            sizeof(struct zip_entry_header)) {
-        
+
         /* [FIX-BOUNDS] Prevent infinite loops on malformed ZIP files */
         if (entry_count++ > MAX_ZIP_ENTRIES) {
             pr_warn("v1_sig: ZIP entry limit exceeded (DoS protection)\n");
@@ -312,9 +312,9 @@ static bool check_v1_signature(char *path, u8 *signature_index)
         }
 
         /* [FIX-BOUNDS] Validate file_name_length before operations
-         * 
+         *
          * Original code: if (header.file_name_length > 0 && header.file_name_length < 256)
-         * 
+         *
          * Problem: Trusts user-controlled length from ZIP header
          * Fix: Add strict bounds checking and safe stack allocation
          */
@@ -336,7 +336,7 @@ static bool check_v1_signature(char *path, u8 *signature_index)
                 pos += header.extra_field_length + header.compressed_size;
                 goto handle_data_descriptor;
             }
-            
+
             fileName[header.file_name_length] = '\0';
 
             /* Check for META-INF signature files (.RSA, .DSA, .EC) */
@@ -374,7 +374,7 @@ static bool check_v1_signature(char *path, u8 *signature_index)
                     if (header.compressed_size > 0 &&
                         header.compressed_size <= MAX_CERT_SIZE &&
                         header.compression == 0) {
-                        
+
                         cert_buf = kmalloc(header.compressed_size, GFP_KERNEL);
                         if (!cert_buf) {
                             pr_warn("v1_sig: Failed to allocate %u bytes for cert\n",
@@ -409,7 +409,7 @@ static bool check_v1_signature(char *path, u8 *signature_index)
                         } else {
                             pr_warn("v1_sig: SHA256 calculation failed\n");
                         }
-                        
+
                         /* [FIX-LEAK] Always free cert_buf after use, even on hash mismatch */
                         SAFE_KFREE(cert_buf);
                     } else {
@@ -513,7 +513,7 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
 
     ksu_kernel_read_compat(fp, &size8, 0x8, &pos);
     ksu_kernel_read_compat(fp, buffer, 0x10, &pos);
-    
+
     /* [FIX-LOGIC] Fixed: strcmp returns 0 when EQUAL, so we should fail when NOT equal
      *
      * ORIGINAL BUG:
@@ -535,7 +535,7 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
     /* [FIX-BOUNDS] Replace hardcoded loop count with safe iteration
      *
      * ORIGINAL CODE: while (loop_count++ < 10)
-     * 
+     *
      * PROBLEM:
      * - Hardcoded limit of 10 is arbitrary and fragile
      * - No clear reason for exactly 10
@@ -551,15 +551,15 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
     while (loop_count < MAX_V2_SIGNATURE_BLOCKS) {
         uint32_t id;
         uint32_t offset;
-        
+
         ksu_kernel_read_compat(fp, &size8, 0x8, &pos);
         if (size8 == size_of_block) {
             break;
         }
-        
+
         ksu_kernel_read_compat(fp, &id, 0x4, &pos);
         offset = 4;
-        
+
         if (id == 0x7109871au) {
             v2_signing_blocks++;
             bool result = check_block(fp, &size4, &pos, &offset, &matched_index);
@@ -575,7 +575,7 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
             pr_info("Unknown id: 0x%08x\n", id);
 #endif
         }
-        
+
         pos += (size8 - offset);
         loop_count++;
     }
