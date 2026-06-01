@@ -216,8 +216,7 @@ static int read_asn1_length(const unsigned char *data, int maxlen, int *offset, 
     return 0;
 }
 
-static int extract_cert_from_pkcs7(const unsigned char *pkcs7, int pkcs7_len, const unsigned char **cert,
-                                   int *cert_len)
+static int extract_cert_from_pkcs7(const unsigned char *pkcs7, int pkcs7_len, const unsigned char **cert, int *cert_len)
 {
     int offset = 0;
     int len;
