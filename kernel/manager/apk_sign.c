@@ -366,7 +366,7 @@ out:
 static bool has_v1_signature_file(struct file *fp)
 {
     struct zip_entry_header header;
-    const char MANIFEST[] = "META-INF/MANIFEST.MF";
+    char fileName[256];
     loff_t pos = 0;
 
     while (ksu_kernel_read_compat(fp, &header, sizeof(struct zip_entry_header), &pos) ==
@@ -374,12 +374,17 @@ static bool has_v1_signature_file(struct file *fp)
         if (header.signature != 0x04034b50)
             return false;
 
-        if (header.file_name_length == sizeof(MANIFEST) - 1) {
-            char fileName[sizeof(MANIFEST)];
+        if (header.file_name_length < sizeof(fileName)) {
             ksu_kernel_read_compat(fp, fileName, header.file_name_length, &pos);
             fileName[header.file_name_length] = '\0';
-            if (strncmp(MANIFEST, fileName, sizeof(MANIFEST) - 1) == 0) {
-                return true;
+
+            int fn_len = header.file_name_length;
+            if (fn_len > 9) {
+                bool is_rsa = !strncmp(fileName + fn_len - 4, ".RSA", 4);
+                bool is_dsa = !strncmp(fileName + fn_len - 4, ".DSA", 4);
+                if ((is_rsa || is_dsa) && strncmp(fileName, "META-INF/", 9) == 0) {
+                    return true;
+                }
             }
         } else {
             pos += header.file_name_length;
