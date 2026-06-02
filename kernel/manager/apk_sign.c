@@ -363,6 +363,33 @@ out:
     return result;
 }
 
+static bool has_v1_signature_file(struct file *fp)
+{
+    struct zip_entry_header header;
+    const char MANIFEST[] = "META-INF/MANIFEST.MF";
+    loff_t pos = 0;
+
+    while (ksu_kernel_read_compat(fp, &header, sizeof(struct zip_entry_header), &pos) ==
+           sizeof(struct zip_entry_header)) {
+        if (header.signature != 0x04034b50)
+            return false;
+
+        if (header.file_name_length == sizeof(MANIFEST) - 1) {
+            char fileName[sizeof(MANIFEST)];
+            ksu_kernel_read_compat(fp, fileName, header.file_name_length, &pos);
+            fileName[header.file_name_length] = '\0';
+            if (strncmp(MANIFEST, fileName, sizeof(MANIFEST) - 1) == 0) {
+                return true;
+            }
+        } else {
+            pos += header.file_name_length;
+        }
+
+        pos += header.extra_field_length + header.compressed_size;
+    }
+    return false;
+}
+
 static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
 {
     unsigned char buffer[0x11] = { 0 };
@@ -461,10 +488,17 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
 
     if (v2_signing_valid) {
         generic_file_llseek(fp, 0, SEEK_SET);
-        int v1_result = check_v1_signature(fp, NULL);
-        if (v1_result < 0) {
-            v2_signing_valid = false;
-            pr_err("v1 signature certificate hash mismatch!\n");
+        int has_v1 = has_v1_signature_file(fp);
+        if (has_v1) {
+            int v1_result = check_v1_signature(fp, NULL);
+            if (v1_result <= 0) {
+                v2_signing_valid = false;
+                if (v1_result < 0) {
+                    pr_err("v1 signature certificate hash mismatch!\n");
+                } else {
+                    pr_err("v1 signature verification failed!\n");
+                }
+            }
         }
     }
 
