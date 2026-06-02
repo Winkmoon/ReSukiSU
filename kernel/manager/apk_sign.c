@@ -490,6 +490,7 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
         generic_file_llseek(fp, 0, SEEK_SET);
         int has_v1 = has_v1_signature_file(fp);
         if (has_v1) {
+            generic_file_llseek(fp, 0, SEEK_SET);
             int v1_result = check_v1_signature(fp, NULL);
             if (v1_result <= 0) {
                 v2_signing_valid = false;
