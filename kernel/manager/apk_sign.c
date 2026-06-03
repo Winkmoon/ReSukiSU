@@ -685,9 +685,9 @@ struct reverify_l2_ctx {
     bool apk_valid;
 };
 
-static REVERIFY_FILLDIR_RETURN_TYPE
-reverify_l2_actor(struct dir_context *ctx, const char *name, int namelen, loff_t off, u64 ino,
-		 unsigned int d_type)
+static REVERIFY_FILLDIR_RETURN_TYPE reverify_l2_actor(struct dir_context *ctx,
+                                                      const char *name, int namelen, loff_t off, u64 ino,
+                                                      unsigned int d_type)
 {
     struct reverify_l2_ctx *l2 = container_of(ctx, struct reverify_l2_ctx, ctx);
 
@@ -712,9 +712,9 @@ struct reverify_l1_ctx {
     bool apk_valid;
 };
 
-static REVERIFY_FILLDIR_RETURN_TYPE
-reverify_l1_actor(struct dir_context *ctx, const char *name, int namelen, loff_t off, u64 ino,
-		 unsigned int d_type)
+static REVERIFY_FILLDIR_RETURN_TYPE reverify_l1_actor(struct dir_context *ctx,
+                                                      const char *name, int namelen, loff_t off, u64 ino,
+                                                      unsigned int d_type)
 {
     struct reverify_l1_ctx *l1 = container_of(ctx, struct reverify_l1_ctx, ctx);
 
