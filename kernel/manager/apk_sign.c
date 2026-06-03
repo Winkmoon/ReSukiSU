@@ -564,8 +564,7 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
                 } else if (v1_result == 0) {
                     pr_err("v1 signature verification failed!\n");
                 } else {
-                    pr_err("v1 certificate mismatch with v2: v1_index=%u v2_index=%u\n",
-                           v1_matched, matched_index);
+                    pr_err("v1 certificate mismatch with v2: v1_index=%u v2_index=%u\n", v1_matched, matched_index);
                 }
             }
         }
