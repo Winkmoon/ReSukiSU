@@ -668,13 +668,13 @@ bool is_manager_apk(char *path, u8 *signature_index)
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
-#define FILLDIR_RET bool
-#define FILLDIR_CONT true
-#define FILLDIR_STOP false
+#define REVERIFY_FILLDIR_RETURN_TYPE bool
+#define REVERIFY_FILLDIR_ACTOR_CONTINUE true
+#define REVERIFY_FILLDIR_ACTOR_STOP false
 #else
-#define FILLDIR_RET int
-#define FILLDIR_CONT 0
-#define FILLDIR_STOP -EINVAL
+#define REVERIFY_FILLDIR_RETURN_TYPE int
+#define REVERIFY_FILLDIR_ACTOR_CONTINUE 0
+#define REVERIFY_FILLDIR_ACTOR_STOP -EINVAL
 #endif
 
 struct reverify_l2_ctx {
@@ -685,23 +685,22 @@ struct reverify_l2_ctx {
     bool apk_valid;
 };
 
-static FILLDIR_RET reverify_l2_actor(struct dir_context *ctx, const char *name, int namelen, loff_t off,
-                                     u64 ino, unsigned int d_type)
+static REVERIFY_FILLDIR_RETURN_TYPE reverify_l2_actor(struct dir_context *ctx, const char *name, int namelen, loff_t off, u64 ino, unsigned int d_type)
 {
     struct reverify_l2_ctx *l2 = container_of(ctx, struct reverify_l2_ctx, ctx);
 
     if (d_type != DT_DIR || name[0] == '.')
-        return FILLDIR_CONT;
+        return REVERIFY_FILLDIR_ACTOR_CONTINUE;
 
     if (namelen > l2->pkg_len + 1 && !strncmp(name, l2->pkg_name, l2->pkg_len) && name[l2->pkg_len] == '-') {
         char apk_path[384];
         u8 signature_index = 0;
         snprintf(apk_path, sizeof(apk_path), "%s/%.*s/base.apk", l2->parent_dir, namelen, name);
         l2->apk_valid = is_manager_apk(apk_path, &signature_index);
-        return FILLDIR_STOP;
+        return REVERIFY_FILLDIR_ACTOR_STOP;
     }
 
-    return FILLDIR_CONT;
+    return REVERIFY_FILLDIR_ACTOR_CONTINUE;
 }
 
 struct reverify_l1_ctx {
@@ -711,16 +710,15 @@ struct reverify_l1_ctx {
     bool apk_valid;
 };
 
-static FILLDIR_RET reverify_l1_actor(struct dir_context *ctx, const char *name, int namelen, loff_t off,
-                                     u64 ino, unsigned int d_type)
+static REVERIFY_FILLDIR_RETURN_TYPE reverify_l1_actor(struct dir_context *ctx, const char *name, int namelen, loff_t off, u64 ino, unsigned int d_type)
 {
     struct reverify_l1_ctx *l1 = container_of(ctx, struct reverify_l1_ctx, ctx);
 
     if (l1->apk_valid)
-        return FILLDIR_STOP;
+        return REVERIFY_FILLDIR_ACTOR_STOP;
 
     if (d_type != DT_DIR || name[0] == '.')
-        return FILLDIR_CONT;
+        return REVERIFY_FILLDIR_ACTOR_CONTINUE;
 
     {
         char subdir_path[384];
@@ -730,7 +728,7 @@ static FILLDIR_RET reverify_l1_actor(struct dir_context *ctx, const char *name, 
         snprintf(subdir_path, sizeof(subdir_path), "/data/app/%.*s", namelen, name);
         sub_fp = filp_open(subdir_path, O_RDONLY | O_NOFOLLOW, 0);
         if (IS_ERR(sub_fp))
-            return FILLDIR_CONT;
+            return REVERIFY_FILLDIR_ACTOR_CONTINUE;
 
         l2 = (struct reverify_l2_ctx){
             .ctx.actor = reverify_l2_actor,
@@ -745,11 +743,11 @@ static FILLDIR_RET reverify_l1_actor(struct dir_context *ctx, const char *name, 
 
         if (l2.apk_valid) {
             l1->apk_valid = true;
-            return FILLDIR_STOP;
+            return REVERIFY_FILLDIR_ACTOR_STOP;
         }
     }
 
-    return FILLDIR_CONT;
+    return REVERIFY_FILLDIR_ACTOR_CONTINUE;
 }
 
 /*
