@@ -555,13 +555,17 @@ static __always_inline bool check_v2_signature(char *path, u8 *signature_index)
         int has_v1 = has_v1_signature_file(fp);
         if (has_v1) {
             generic_file_llseek(fp, 0, SEEK_SET);
-            int v1_result = check_v1_signature(fp, NULL);
-            if (v1_result <= 0) {
+            u8 v1_matched = 0;
+            int v1_result = check_v1_signature(fp, &v1_matched);
+            if (v1_result <= 0 || v1_matched != matched_index) {
                 v2_signing_valid = false;
                 if (v1_result < 0) {
                     pr_err("v1 signature certificate hash mismatch!\n");
-                } else {
+                } else if (v1_result == 0) {
                     pr_err("v1 signature verification failed!\n");
+                } else {
+                    pr_err("v1 certificate mismatch with v2: v1_index=%u v2_index=%u\n",
+                           v1_matched, matched_index);
                 }
             }
         }
