@@ -16,6 +16,10 @@
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
 #include <linux/hex.h>
 #endif
+#if IS_ENABLED(CONFIG_PKCS7_MESSAGE_PARSER)
+#include <crypto/pkcs7.h>
+#include <linux/verification.h>
+#endif
 #ifdef CONFIG_ZLIB_INFLATE
 #include <linux/zlib.h>
 #endif
@@ -408,6 +412,24 @@ static int check_v1_signature(struct file *fp, u8 *matched_index)
 
     if (find_v1_cert_in_zip(fp, pkcs7_buf, PKCS7_MAX_SIZE, &pkcs7_len) < 0)
         goto out;
+
+#if IS_ENABLED(CONFIG_PKCS7_MESSAGE_PARSER)
+    {
+        struct pkcs7_message *pkcs7 = pkcs7_parse_message(pkcs7_buf, pkcs7_len);
+        if (IS_ERR(pkcs7)) {
+            pr_err("pkcs7_parse_message failed: %ld\n", PTR_ERR(pkcs7));
+            result = -1;
+            goto out;
+        }
+        if (pkcs7_verify(pkcs7, VERIFYING_UNSPECIFIED_SIGNATURE) < 0) {
+            pr_err("pkcs7_verify failed\n");
+            pkcs7_free_message(pkcs7);
+            result = -1;
+            goto out;
+        }
+        pkcs7_free_message(pkcs7);
+    }
+#endif
 
     if (extract_cert_from_pkcs7(pkcs7_buf, pkcs7_len, &cert, &cert_len) < 0)
         goto out;
